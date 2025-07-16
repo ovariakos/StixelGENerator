@@ -128,14 +128,14 @@ def main() -> None:
     map_file = os.path.join(args.out, "dataset_map.csv")
     with open(map_file, "w") as f:
         f.write("index,image_timestamp,image_file,pc_timestamp,pc_file\n")
-        length = max(len(img_map), len(pc_map))
+        length = min(len(img_map), len(pc_map))
+        if len(img_map) != len(pc_map):
+            print(
+                f"Warning: unmatched message counts - keeping {length} paired frames"
+            )
         for idx in range(length):
-            img_ts, img_file = ("", "")
-            pc_ts, pc_file = ("", "")
-            if idx < len(img_map):
-                _, img_ts, img_file = img_map[idx]
-            if idx < len(pc_map):
-                _, pc_ts, pc_file = pc_map[idx]
+            _, img_ts, img_file = img_map[idx]
+            _, pc_ts, pc_file = pc_map[idx]
             f.write(f"{idx},{img_ts},{img_file},{pc_ts},{pc_file}\n")
 
     conn.close()

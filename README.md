@@ -75,10 +75,10 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
        --pc_topic /ouster/points \
        --out dataset_raw
    ```
-   The utility numbers the extracted messages consecutively. Each frame consists
-   of `images/<index>.jpg` and `pointclouds/<index>.csv`. A `dataset_map.csv`
-   file stores the original ROS timestamps so that the order can easily be
-   reconstructed later.
+   The utility numbers the extracted messages consecutively and keeps only
+   frames that contain both an image and a point cloud. Each pair is listed in
+   `dataset_map.csv` together with the original ROS timestamps so that the
+   capture order can be reconstructed later.
 
    The resulting folder tree therefore looks like:
 
@@ -114,8 +114,8 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
    ```
 
 7. **Implement a dataloader**
-   The repository does not ship a generic loader for rosbag exports. Use the
-   provided `dataset_map.csv` as a starting point to write your own loader that
-   reads the images, loads the CSV point clouds and applies your calibration
-   matrices. Existing dataloaders in the `dataloader` directory can serve as
-   examples.
+   A simple loader named `RosbagDataLoader` is available to read this structure.
+   It expects a `calibration.yaml` next to `dataset_map.csv` containing the
+   camera matrices (K, P, R, T). You can use it directly by setting
+   `dataset: rosbag` in `config.yaml` or adapt it for your own needs. Existing
+   dataloaders in the `dataloader` directory can serve as examples.
