@@ -25,6 +25,8 @@ elif config['dataset'] == "kitti":
     from dataloader import KittiDataLoader as Dataset, KittiData as Data
 elif config['dataset'] == "aeif":
     from dataloader import CoopScenesDataLoader as Dataset, CoopSceneData as Data
+elif config['dataset'] == "rosbag":
+    from dataloader import RosbagDataLoader as Dataset, RosbagData as Data
 else:
     raise ValueError("Dataset not supported")
 overall_start_time = datetime.now()
