@@ -1,5 +1,4 @@
-from dataloader import WaymoDataLoader as Dataset
-from dataloader.WaymoDataset import show_projected_camera_synced_boxes
+from dataloader import RosbagDataLoader as Dataset, RosbagData as Data
 from libraries import *
 import open3d as o3d
 import numpy as np
@@ -9,14 +8,8 @@ from libraries.Stixel import point_dtype_ext
 
 with open('config.yaml') as yaml_file:
     config = yaml.load(yaml_file, Loader=yaml.FullLoader)
-if config['dataset'] == "waymo":
-    from dataloader import WaymoDataLoader as Dataset, WaymoData as Data
-elif config['dataset'] == "kitti":
-    from dataloader import KittiDataLoader as Dataset, KittiData as Data
-elif config['dataset'] == "aeif":
-    from dataloader import CoopScenesDataLoader as Dataset, CoopSceneData as Data
-else:
-    raise ValueError("Dataset not supported")
+if config['dataset'] != "rosbag":
+    raise ValueError("Only rosbag dataset is supported in this simplified setup")
 
 
 def main():
@@ -39,10 +32,9 @@ def main():
     points_on_img = draw_points_on_image(np.array(sample.image), sample.points)
     points_on_img.show()
     """ 0.2 Check out if your own camera-lidar projection works (camera calib data are not always and for everyone
-     unique explained). It is necessary to calculate the correct bottom point of a finished Stixel. 
-     coloring_sem=waymo_laser_label_color 
+     unique explained). It is necessary to calculate the correct bottom point of a finished Stixel.
     # new_pts = sample.projection_test()
-    
+
     angled_img = draw_points_on_image(np.array(sample.image), angled_pts, color_by_angle=True)
     angled_img.show() """
     angled_pts = group_points_by_angle(points=sample.points, param=dataset.config['group_angle'],
@@ -54,7 +46,7 @@ def main():
     """ Semantic filtering """
     # pts_filter_sem_seg = filter_points_by_semantic(points=sample.points,
     #                                               param=dataset.config['semantic_filter'])
-    # points_on_img = draw_points_on_image(np.array(sample.image), pts_filter_sem_seg, coloring_sem=waymo_laser_label_color)
+    # points_on_img = draw_points_on_image(np.array(sample.image), pts_filter_sem_seg)
     # points_on_img.show()
 
     """ 1. Adjust the ground detection. Try to make it rough! the street should disappear every time! Repeat the same
@@ -160,15 +152,6 @@ def main():
 
     # new_img_pts = sample.projection_test()
     new_pts = sample.inverse_projection(sample.points)
-    coord = np.vstack((sample.points['x'], sample.points['y'], sample.points['z'])).T
-    coord = np.insert(coord[:, 0:3], 3, 1, axis=1).T
-    waymo_cam_RT = np.array([0, -1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 1]).reshape(4, 4)
-    dist_1 = sample.camera_info.T @ waymo_cam_RT @ coord
-    dist_1 = dist_1.T
-    dist = np.linalg.norm(dist_1, axis=1)
-    # dist = np.sqrt(new_img_pts['x']**2 + new_img_pts['y']**2 + new_img_pts['z']**2)
-    ws = sample.points['w']
-    k = dist/ws
 
     pcd = o3d.geometry.PointCloud()
     stx_pts = np.array([tuple(row) for row in np.array(stx_pts)], dtype=point_dtype_ext)

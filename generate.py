@@ -19,30 +19,22 @@ from libraries import remove_far_points, remove_ground, StixelGenerator, Stixel,
 # open Config
 with open('config.yaml') as yaml_file:
     config = yaml.load(yaml_file, Loader=yaml.FullLoader)
-if config['dataset'] == "waymo":
-    from dataloader import WaymoDataLoader as Dataset, WaymoData as Data
-elif config['dataset'] == "kitti":
-    from dataloader import KittiDataLoader as Dataset, KittiData as Data
-elif config['dataset'] == "aeif":
-    from dataloader import CoopScenesDataLoader as Dataset, CoopSceneData as Data
-elif config['dataset'] == "rosbag":
-    from dataloader import RosbagDataLoader as Dataset, RosbagData as Data
-else:
-    raise ValueError("Dataset not supported")
+if config['dataset'] != "rosbag":
+    raise ValueError("Only rosbag dataset is supported in this simplified setup")
+from dataloader import RosbagDataLoader as Dataset, RosbagData as Data
 overall_start_time = datetime.now()
 
 
 def main():
     """
-    Basic start of the project. Configure phase and load the related data. E.g. Kitti dataloader provides datasets
-    organised by drive.
+    Basic start of the project. Configure the phases and load the rosbag data.
     """
     # config['phases']      'validation', 'testing', 'training'
     for config_phase in ['validation', 'training']:
         phase = config_phase
         with open(f"failures_{phase}.txt", "w") as file:
             file.write("Record names by phase, which failed to open: \n")
-        # every dataset consist all frames of one drive (kitti)
+        # load all frames from the rosbag export
         dataset: Dataset = Dataset(data_dir=config['raw_data_path'], phase=phase, first_only=False)
         """ Multi Threading - deprecated
         process_workload: int = int(len(dataset) / config['num_threads'])
@@ -66,8 +58,9 @@ def main():
 
 def _generate_data_from_record_chunk(index_list: List[int], dataloader: Dataset, phase: str):
     """
-    Iterates through all drives, frame by frame. For every frame a stixel world is generated.
-    The access is simply done by an index list which enables the distribution to multiple threads
+    Iterate over all frames from the rosbag export and generate a stixel world
+    for each one. The index list allows easy distribution across multiple
+    threads.
     Args:
         index_list: A list of indices representing the records to be processed.
         dataloader: The dataset object that provides access to the data.
