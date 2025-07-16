@@ -51,24 +51,23 @@ Documentation for the functions are provided by the code. The los (line of sight
 ### Utilities
 * explore: A simple workspace script to use and inspect the derived data, step by step.
 
-### Dataset létrehozása rosbagből
-Az alábbi lépések segítenek egy rosbag állományból olyan nyers adatkészletet előállítani, amelyet a StixelGENerator képes feldolgozni.
+### Creating a dataset from rosbag
+The following steps show how to extract a raw dataset from a rosbag so that it can be processed by StixelGENerator.
 
-1. **Rosbag konvertálása**
-   Ha a felvétel ROS1 formátumú, először konvertáld ROS2 baggé:
+1. **Convert the rosbag**
+   If your recording is in ROS1 format, convert it to ROS2 first:
    ```bash
    ros2 bag convert input.bag -o output_bag
    ```
 
-2. **A bag tartalmának ellenőrzése**
-   A `.db3` adatbázisban tárolt topikok listázása például az alábbi paranccsal lehetséges:
+2. **Inspect the bag contents**
+   List the available topics stored in the `.db3` database:
    ```bash
    sqlite3 output_bag.db3 "SELECT name FROM topics;"
    ```
 
-3. **Üzenetek kinyerése**
-   A `utility/rosbag_to_dataset.py` szkript képes a kiválasztott kép- és pontfelhő
-   topikokból fájlokat generálni. Például ZED2i bal kamera és Ouster LiDAR esetén:
+3. **Extract messages**
+   Use the `utility/rosbag_to_dataset.py` script to export files from the chosen image and point cloud topics. For example with a ZED2i left camera and an Ouster LiDAR:
    ```bash
    python utility/rosbag_to_dataset.py \
        --db output_bag.db3 \
@@ -76,23 +75,16 @@ Az alábbi lépések segítenek egy rosbag állományból olyan nyers adatkészl
        --pc_topic /ouster/points \
        --out dataset_raw
    ```
-   A kimenetként létrejövő `dataset_raw/images` és `dataset_raw/pointclouds`
-   könyvtárakban JPEG képek és CSV formátumú pontfelhők lesznek elhelyezve.
+   The resulting `dataset_raw/images` and `dataset_raw/pointclouds` directories will contain JPEG images and CSV point clouds.
 
-4. **Kompatibilitás ellenőrzése**
-   A StixelGENerator Dataloader a JPEG képeket és a `x,y,z` koordinátákat tartalmazó
-   CSV-ket is képes kezelni, ha a kalibrációs mátrixok elérhetők. Ellenőrizd, hogy
-   mindkét mappában azonos számú fájl keletkezett, illetve hogy a pontfelhők a
-   szenzor specifikációinak megfelelően vannak kinyerve.
+4. **Verify compatibility**
+   StixelGENerator's dataloaders can read JPEG images and `x,y,z` CSV files when calibration matrices are provided. Check that both folders contain the same number of files and that the point clouds are correctly extracted for your sensor.
 
-5. **Kalibrációk hozzáadása**
-   A generáláshoz szükséges a kamera–LiDAR kalibráció (K, P, extrinsic). Ezeket a
-   rosbagből vagy a használt szenzorrendszer dokumentációjából kell kinyerni, és
-   a saját adatbetöltőben felhasználni.
+5. **Add calibrations**
+   Camera–LiDAR calibration (K, P and extrinsic) must be obtained from the rosbag or your sensor setup and integrated in your custom dataloader.
 
-6. **Stixel világ előállítása**
-   A `config.yaml`-ban add meg az új adatútvonalat, majd indítsd el a
-   generálást:
+6. **Generate Stixel Worlds**
+   Configure the new data path in `config.yaml` and start the generation:
    ```bash
    python generate.py
    ```
