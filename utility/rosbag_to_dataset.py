@@ -33,20 +33,44 @@ def fetch_messages(cur: sqlite3.Cursor, tid: int):
     return cur.fetchall()
 
 
-def extract_images(msgs, out_dir: str) -> None:
+def extract_images(msgs, out_dir: str):
+    """Extract JPEG images from messages.
+
+    Args:
+        msgs: Sequence of (timestamp, data) tuples.
+        out_dir: Destination directory for image files.
+
+    Returns:
+        List of tuples ``(index, timestamp, filename)`` for mapping creation.
+    """
     ensure_dir(out_dir)
-    for ts, blob in msgs:
+    mapping = []
+    for idx, (ts, blob) in enumerate(msgs):
         start = blob.find(b"\xff\xd8")
         end = blob.rfind(b"\xff\xd9")
         if start < 0 or end < 0:
             continue
-        with open(os.path.join(out_dir, f"{ts}.jpg"), "wb") as f:
+        fname = f"{idx:06d}.jpg"
+        with open(os.path.join(out_dir, fname), "wb") as f:
             f.write(blob[start:end + 2])
+        mapping.append((idx, ts, os.path.join("images", fname)))
+    return mapping
 
 
-def extract_pointclouds(msgs, out_dir: str, step: int = POINT_STEP) -> None:
+def extract_pointclouds(msgs, out_dir: str, step: int = POINT_STEP):
+    """Extract XYZ point clouds from messages.
+
+    Args:
+        msgs: Sequence of (timestamp, data) tuples.
+        out_dir: Destination directory for CSV files.
+        step: Point step size in bytes.
+
+    Returns:
+        List of tuples ``(index, timestamp, filename)`` for mapping creation.
+    """
     ensure_dir(out_dir)
-    for ts, blob in msgs:
+    mapping = []
+    for idx, (ts, blob) in enumerate(msgs):
         hdr = next((i for i in range(1024) if (len(blob) - i) % step == 0), None)
         if hdr is None:
             continue
@@ -54,13 +78,16 @@ def extract_pointclouds(msgs, out_dir: str, step: int = POINT_STEP) -> None:
         pts = np.frombuffer(data, dtype=np.float32)
         arr = pts.reshape(len(data) // step, step // 4)
         xyz = arr[:, [OFFSETS["x"] // 4, OFFSETS["y"] // 4, OFFSETS["z"] // 4]]
+        fname = f"{idx:06d}.csv"
         np.savetxt(
-            os.path.join(out_dir, f"{ts}.csv"),
+            os.path.join(out_dir, fname),
             xyz,
             delimiter=",",
             header="x,y,z",
             comments="",
         )
+        mapping.append((idx, ts, os.path.join("pointclouds", fname)))
+    return mapping
 
 
 def list_topics(cur: sqlite3.Cursor):
@@ -85,15 +112,31 @@ def main() -> None:
     for t in list_topics(cur):
         print(" ", t)
 
+    img_map = []
+    pc_map = []
+
     tid = query_id(cur, args.image_topic)
     if tid is not None:
         msgs = fetch_messages(cur, tid)
-        extract_images(msgs, os.path.join(args.out, "images"))
+        img_map = extract_images(msgs, os.path.join(args.out, "images"))
 
     tid = query_id(cur, args.pc_topic)
     if tid is not None:
         msgs = fetch_messages(cur, tid)
-        extract_pointclouds(msgs, os.path.join(args.out, "pointclouds"))
+        pc_map = extract_pointclouds(msgs, os.path.join(args.out, "pointclouds"))
+
+    map_file = os.path.join(args.out, "dataset_map.csv")
+    with open(map_file, "w") as f:
+        f.write("index,image_timestamp,image_file,pc_timestamp,pc_file\n")
+        length = max(len(img_map), len(pc_map))
+        for idx in range(length):
+            img_ts, img_file = ("", "")
+            pc_ts, pc_file = ("", "")
+            if idx < len(img_map):
+                _, img_ts, img_file = img_map[idx]
+            if idx < len(pc_map):
+                _, pc_ts, pc_file = pc_map[idx]
+            f.write(f"{idx},{img_ts},{img_file},{pc_ts},{pc_file}\n")
 
     conn.close()
 
