@@ -124,13 +124,22 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
    matrices. The mapping provided by `dataset_map.csv` can then be used to
    associate the calibration with each frame.
 
-6. **Generate Stixel Worlds**
+6. **Tweak calibration**
+   To manually align the point cloud with the image you can use
+   `utility/calibration_gui.py`:
+   ```bash
+   python utility/calibration_gui.py --data dataset_raw
+   ```
+   Sliders allow adjusting the intrinsic and extrinsic parameters. Press `s` to
+   write the current values to `calibration.yaml` in the dataset folder.
+
+7. **Generate Stixel Worlds**
    Configure the new data path in `config.yaml` and start the generation:
    ```bash
    python generate.py
    ```
 
-7. **Implement a dataloader**
+8. **Implement a dataloader**
    A simple loader named `RosbagDataLoader` is available to read this structure.
    It expects a `calibration.yaml` next to `dataset_map.csv` containing the
    camera matrices (K, P, R, T). You can use it directly by setting
