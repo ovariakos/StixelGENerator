@@ -6,8 +6,8 @@ phases:
   - training
   - validation
   - testing
-data_path: /media/marcel/Data1/datasets
-raw_data_path: /media/marcel/Data1/rosbag_dataset
+data_path: /media/marcel/Data1/datasets/train_on_kitti
+raw_data_path: /media/marcel/Data1/Raw
 exploring:
   view: 1
   random_idx: False
@@ -16,3 +16,5 @@ exploring:
   col: 180
 explore_data_deep: False
 grid_step: 4
+SemSeg:
+  for_dataset: kitti
