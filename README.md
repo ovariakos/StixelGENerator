@@ -75,16 +75,47 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
        --pc_topic /ouster/points \
        --out dataset_raw
    ```
-   The resulting `dataset_raw/images` and `dataset_raw/pointclouds` directories will contain JPEG images and CSV point clouds.
+   The utility numbers the extracted messages consecutively. Each frame consists
+   of `images/<index>.jpg` and `pointclouds/<index>.csv`. A `dataset_map.csv`
+   file stores the original ROS timestamps so that the order can easily be
+   reconstructed later.
+
+   The resulting folder tree therefore looks like:
+
+   ```text
+   dataset_raw/
+       dataset_map.csv
+       images/
+           000000.jpg
+           000001.jpg
+           ...
+       pointclouds/
+           000000.csv
+           000001.csv
+           ...
+   ```
 
 4. **Verify compatibility**
-   StixelGENerator's dataloaders can read JPEG images and `x,y,z` CSV files when calibration matrices are provided. Check that both folders contain the same number of files and that the point clouds are correctly extracted for your sensor.
+   StixelGENerator's dataloaders can read JPEG images and `x,y,z` CSV files when
+   calibration matrices are provided. Use the `dataset_map.csv` file to confirm
+   that every index has both an image and a point cloud. Check that the
+   coordinates are reasonable for your sensor setup.
 
 5. **Add calibrations**
-   Camera–LiDAR calibration (K, P and extrinsic) must be obtained from the rosbag or your sensor setup and integrated in your custom dataloader.
+   Camera–LiDAR calibration (K, P and extrinsic) must be obtained from the
+   rosbag or your sensor setup and referenced by your dataloader. The mapping
+   provided by `dataset_map.csv` can be used to associate the calibration with
+   each frame.
 
 6. **Generate Stixel Worlds**
    Configure the new data path in `config.yaml` and start the generation:
    ```bash
    python generate.py
    ```
+
+7. **Implement a dataloader**
+   The repository does not ship a generic loader for rosbag exports. Use the
+   provided `dataset_map.csv` as a starting point to write your own loader that
+   reads the images, loads the CSV point clouds and applies your calibration
+   matrices. Existing dataloaders in the `dataloader` directory can serve as
+   examples.
