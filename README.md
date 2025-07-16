@@ -50,3 +50,41 @@ Documentation for the functions are provided by the code. The los (line of sight
 
 ### Utilities
 * explore: A simple workspace script to use and inspect the derived data, step by step.
+
+### Creating a dataset from rosbag
+The following steps show how to extract a raw dataset from a rosbag so that it can be processed by StixelGENerator.
+
+1. **Convert the rosbag**
+   If your recording is in ROS1 format, convert it to ROS2 first:
+   ```bash
+   ros2 bag convert input.bag -o output_bag
+   ```
+
+2. **Inspect the bag contents**
+   List the available topics stored in the `.db3` database:
+   ```bash
+   sqlite3 output_bag.db3 "SELECT name FROM topics;"
+   ```
+
+3. **Extract messages**
+   Use the `utility/rosbag_to_dataset.py` script to export files from the chosen image and point cloud topics. For example with a ZED2i left camera and an Ouster LiDAR:
+   ```bash
+   python utility/rosbag_to_dataset.py \
+       --db output_bag.db3 \
+       --image_topic /zed2i/zed_node/left/image_rect_color/compressed \
+       --pc_topic /ouster/points \
+       --out dataset_raw
+   ```
+   The resulting `dataset_raw/images` and `dataset_raw/pointclouds` directories will contain JPEG images and CSV point clouds.
+
+4. **Verify compatibility**
+   StixelGENerator's dataloaders can read JPEG images and `x,y,z` CSV files when calibration matrices are provided. Check that both folders contain the same number of files and that the point clouds are correctly extracted for your sensor.
+
+5. **Add calibrations**
+   Camera–LiDAR calibration (K, P and extrinsic) must be obtained from the rosbag or your sensor setup and integrated in your custom dataloader.
+
+6. **Generate Stixel Worlds**
+   Configure the new data path in `config.yaml` and start the generation:
+   ```bash
+   python generate.py
+   ```
