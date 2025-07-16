@@ -68,23 +68,29 @@ Az alábbi lépések segítenek egy rosbag állományból olyan nyers adatkészl
 
 3. **Üzenetek kinyerése**
    A `utility/rosbag_to_dataset.py` szkript képes a kiválasztott kép- és pontfelhő
-   topikokból fájlokat generálni:
+   topikokból fájlokat generálni. Például ZED2i bal kamera és Ouster LiDAR esetén:
    ```bash
    python utility/rosbag_to_dataset.py \
        --db output_bag.db3 \
-       --image_topic /camera/image/compressed \
-       --pc_topic /lidar/points \
+       --image_topic /zed2i/zed_node/left/image_rect_color/compressed \
+       --pc_topic /ouster/points \
        --out dataset_raw
    ```
    A kimenetként létrejövő `dataset_raw/images` és `dataset_raw/pointclouds`
    könyvtárakban JPEG képek és CSV formátumú pontfelhők lesznek elhelyezve.
 
-4. **Kalibrációk hozzáadása**
+4. **Kompatibilitás ellenőrzése**
+   A StixelGENerator Dataloader a JPEG képeket és a `x,y,z` koordinátákat tartalmazó
+   CSV-ket is képes kezelni, ha a kalibrációs mátrixok elérhetők. Ellenőrizd, hogy
+   mindkét mappában azonos számú fájl keletkezett, illetve hogy a pontfelhők a
+   szenzor specifikációinak megfelelően vannak kinyerve.
+
+5. **Kalibrációk hozzáadása**
    A generáláshoz szükséges a kamera–LiDAR kalibráció (K, P, extrinsic). Ezeket a
    rosbagből vagy a használt szenzorrendszer dokumentációjából kell kinyerni, és
    a saját adatbetöltőben felhasználni.
 
-5. **Stixel világ előállítása**
+6. **Stixel világ előállítása**
    A `config.yaml`-ban add meg az új adatútvonalat, majd indítsd el a
    generálást:
    ```bash
