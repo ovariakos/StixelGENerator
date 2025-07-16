@@ -61,19 +61,21 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
    ```
 
 2. **Inspect the bag contents**
-   List the available topics stored in the `.db3` database:
+   For SQLite-based ROS2 bags (`.db3`), list the available topics with:
    ```bash
    sqlite3 output_bag.db3 "SELECT name FROM topics;"
    ```
+   For MCAP files, you can inspect channels using the
+   [`mcap` command line tool](https://github.com/foxglove/mcap) or another viewer.
 
 3. **Extract messages**
-   Use the `utility/rosbag_to_dataset.py` script to export files from the chosen image and point cloud topics. For example with a ZED2i left camera and an Ouster LiDAR:
+   Use the `utility/rosbag_to_dataset.py` script to export files from the chosen image and point cloud topics. The `--bag` argument accepts either a `.db3` ROS2 bag or an `.mcap` file. For example with a ZED2i left camera and an Ouster LiDAR:
    ```bash
-   python utility/rosbag_to_dataset.py \
-       --db output_bag.db3 \
-       --image_topic /zed2i/zed_node/left/image_rect_color/compressed \
-       --pc_topic /ouster/points \
-       --out dataset_raw
+  python utility/rosbag_to_dataset.py \
+      --bag output_bag.db3 \
+      --image_topic /zed2i/zed_node/left/image_rect_color/compressed \
+      --pc_topic /ouster/points \
+      --out dataset_raw
    ```
    The utility numbers the extracted messages consecutively and keeps only
    frames that contain both an image and a point cloud. Each pair is listed in

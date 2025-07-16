@@ -10,3 +10,4 @@ scipy
 pykitti
 waymo-open-dataset-tf-2-12-0
 pyStixel-lib
+mcap
