@@ -102,10 +102,27 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
    coordinates are reasonable for your sensor setup.
 
 5. **Add calibrations**
-   Camera–LiDAR calibration (K, P and extrinsic) must be obtained from the
-   rosbag or your sensor setup and referenced by your dataloader. The mapping
-   provided by `dataset_map.csv` can be used to associate the calibration with
-   each frame.
+   Place a file named `calibration.yaml` in the same directory as
+   `dataset_map.csv` (e.g. `dataset_raw/`). This file describes the
+   camera–LiDAR calibration used by the dataloader:
+
+   - `K` (3×3): camera matrix
+   - `P` (3×4): projection matrix
+   - `R` (4×4): rectification matrix, usually the identity
+   - `T` (4×4): extrinsic transform from the camera to the LiDAR frame
+
+   Example:
+
+   ```yaml
+   K: [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
+   P: [[fx, 0, cx, 0], [0, fy, cy, 0], [0, 0, 1, 0]]
+   R: [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]
+   T: [[r11,r12,r13,tx], [r21,r22,r23,ty], [r31,r32,r33,tz], [0,0,0,1]]
+   ```
+
+   If `calibration.yaml` is missing, the loader falls back to identity
+   matrices. The mapping provided by `dataset_map.csv` can then be used to
+   associate the calibration with each frame.
 
 6. **Generate Stixel Worlds**
    Configure the new data path in `config.yaml` and start the generation:
