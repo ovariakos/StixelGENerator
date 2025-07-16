@@ -50,3 +50,43 @@ Documentation for the functions are provided by the code. The los (line of sight
 
 ### Utilities
 * explore: A simple workspace script to use and inspect the derived data, step by step.
+
+### Dataset létrehozása rosbagből
+Az alábbi lépések segítenek egy rosbag állományból olyan nyers adatkészletet előállítani, amelyet a StixelGENerator képes feldolgozni.
+
+1. **Rosbag konvertálása**
+   Ha a felvétel ROS1 formátumú, először konvertáld ROS2 baggé:
+   ```bash
+   ros2 bag convert input.bag -o output_bag
+   ```
+
+2. **A bag tartalmának ellenőrzése**
+   A `.db3` adatbázisban tárolt topikok listázása például az alábbi paranccsal lehetséges:
+   ```bash
+   sqlite3 output_bag.db3 "SELECT name FROM topics;"
+   ```
+
+3. **Üzenetek kinyerése**
+   A `utility/rosbag_to_dataset.py` szkript képes a kiválasztott kép- és pontfelhő
+   topikokból fájlokat generálni:
+   ```bash
+   python utility/rosbag_to_dataset.py \
+       --db output_bag.db3 \
+       --image_topic /camera/image/compressed \
+       --pc_topic /lidar/points \
+       --out dataset_raw
+   ```
+   A kimenetként létrejövő `dataset_raw/images` és `dataset_raw/pointclouds`
+   könyvtárakban JPEG képek és CSV formátumú pontfelhők lesznek elhelyezve.
+
+4. **Kalibrációk hozzáadása**
+   A generáláshoz szükséges a kamera–LiDAR kalibráció (K, P, extrinsic). Ezeket a
+   rosbagből vagy a használt szenzorrendszer dokumentációjából kell kinyerni, és
+   a saját adatbetöltőben felhasználni.
+
+5. **Stixel világ előállítása**
+   A `config.yaml`-ban add meg az új adatútvonalat, majd indítsd el a
+   generálást:
+   ```bash
+   python generate.py
+   ```
