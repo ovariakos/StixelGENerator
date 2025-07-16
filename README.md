@@ -10,24 +10,17 @@ University of Esslingen, UCA Sigma Clermont\
 This repo provides the basic toolset to generate a Stixel World from LiDAR. It is used as Ground Truth for 
 the [StixelNExT](https://github.com/MarcelVSHNS/StixelNExT) 2D estimator as well as for the 3D approach: [StixelNExT++](https://github.com/MarcelVSHNS/StixelNExT_Pro).
 
-### Usage with Waymo or KITTI
+### Quick start
 1. Clone the repo to your local machine
-2. Set up a virtual environment with `python -m venv venv` (we tested on Python 3.10) or Anaconda respectively `conda create -n StixelGEN python=3.10`. Activate with `source venv/bin/activate`/ `conda activate StixelGEN`
-3. Install requirements with `pip install -r requirements.txt`/ `conda install --file requirements.txt` 
-4. Configure the project: adapt your paths in the `config.yaml`-file and select the dataset with the import in `/generate.py` like:
-```python
-from dataloader import WaymoDataLoader as Dataset   # or KittiDataLoader
-```
-After that you can test the functionalities with `utility/explore.py` or run `/generate.py` to generate Stixel Worlds.
+2. Set up a virtual environment with `python -m venv venv` (tested on Python 3.10) or Anaconda: `conda create -n StixelGEN python=3.10`. Activate with `source venv/bin/activate` / `conda activate StixelGEN`.
+3. Install requirements with `pip install -r requirements.txt` or `conda install --file requirements.txt`.
+4. Configure the project by adapting the paths in `config.yaml`. The only supported dataset type is `rosbag` so no additional libraries like `waymo-open-dataset` are required.
+   Run `generate.py` or use `utility/explore.py` to process the extracted bag data.
 
 #### Output
 The output is a `.stx1` file which is a Protobuf for Stixel Worlds. It includes the Stixel as well as the image and is 
 ready to serve as input data for StixelNExT++. The corresponding library can be installed with `pip install pyStixel-lib`
 and is public available [here](https://github.com/MarcelVSHNS/pyStixel-lib).
-
-#### KITTI Training Data
-We also provide an already generated dataset, based on the public available KITTI dataset. It can be downloaded
-[here](https://drive.google.com/drive/folders/1ft99z9F4053zDzyIDn2DZ_8qh5if-QvW?usp=sharing) (35.48 GB)
 
 ### Adaption to other Datasets
 The repo is designed to work with adaptive dataloader, which can be handled by the import commands. 
