@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Extract images and point clouds from a ROS2 bag.
 
-This utility reads a rosbag2 SQLite database and writes each image and
-point cloud message into a separate file. The output can be used as the
-raw dataset for StixelGENerator after adding calibration information.
+This utility reads a rosbag2 SQLite database or an MCAP file and writes each
+image and point cloud message into a separate file. The output can be used as
+the raw dataset for StixelGENerator after adding calibration information.
 """
 import argparse
 import os
 import sqlite3
 from pathlib import Path
+from typing import List
+
+from mcap.reader import make_reader
 import numpy as np
 
 POINT_STEP = 32
@@ -31,6 +34,13 @@ def fetch_messages(cur: sqlite3.Cursor, tid: int):
         (tid,),
     )
     return cur.fetchall()
+
+
+def fetch_messages_mcap(reader, topic: str):
+    return [
+        (msg.log_time, msg.data)
+        for _, _ch, msg in reader.iter_messages(topics=[topic])
+    ]
 
 
 def extract_images(msgs, out_dir: str):
@@ -90,14 +100,27 @@ def extract_pointclouds(msgs, out_dir: str, step: int = POINT_STEP):
     return mapping
 
 
-def list_topics(cur: sqlite3.Cursor):
+def list_topics_db3(cur: sqlite3.Cursor):
     cur.execute("SELECT name FROM topics")
     return [row[0] for row in cur.fetchall()]
 
 
+def list_topics_mcap(reader) -> list[str]:
+    summary = reader.get_summary()
+    if summary is None:
+        return []
+    return [ch.topic for ch in summary.channels.values()]
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convert rosbag2 DB to dataset")
-    parser.add_argument("--db", required=True, help="sqlite3 bag file (*.db3)")
+    parser = argparse.ArgumentParser(description="Convert rosbag to dataset")
+    parser.add_argument(
+        "--db",
+        "--bag",
+        dest="bag",
+        required=True,
+        help="rosbag file (.db3 or .mcap)",
+    )
     parser.add_argument("--image_topic", required=True, help="Image topic name")
     parser.add_argument("--pc_topic", required=True, help="Pointcloud topic name")
     parser.add_argument("--out", default="rosbag_dataset", help="Output directory")
@@ -105,25 +128,50 @@ def main() -> None:
 
     ensure_dir(args.out)
 
-    conn = sqlite3.connect(args.db)
-    cur = conn.cursor()
+    img_map: list[tuple[int, int, str]] = []
+    pc_map: list[tuple[int, int, str]] = []
 
-    print("Available topics:")
-    for t in list_topics(cur):
-        print(" ", t)
+    if args.bag.endswith(".db3"):
+        conn = sqlite3.connect(args.bag)
+        cur = conn.cursor()
+        topics = list_topics_db3(cur)
+        print("Available topics:")
+        for t in topics:
+            print(" ", t)
 
-    img_map = []
-    pc_map = []
+        tid = query_id(cur, args.image_topic)
+        if tid is not None:
+            msgs = fetch_messages(cur, tid)
+            img_map = extract_images(msgs, os.path.join(args.out, "images"))
 
-    tid = query_id(cur, args.image_topic)
-    if tid is not None:
-        msgs = fetch_messages(cur, tid)
-        img_map = extract_images(msgs, os.path.join(args.out, "images"))
+        tid = query_id(cur, args.pc_topic)
+        if tid is not None:
+            msgs = fetch_messages(cur, tid)
+            pc_map = extract_pointclouds(
+                msgs, os.path.join(args.out, "pointclouds")
+            )
+        conn.close()
 
-    tid = query_id(cur, args.pc_topic)
-    if tid is not None:
-        msgs = fetch_messages(cur, tid)
-        pc_map = extract_pointclouds(msgs, os.path.join(args.out, "pointclouds"))
+    elif args.bag.endswith(".mcap"):
+        with open(args.bag, "rb") as f:
+            reader = make_reader(f)
+            topics = list_topics_mcap(reader)
+            print("Available topics:")
+            for t in topics:
+                print(" ", t)
+
+            if args.image_topic in topics:
+                msgs = fetch_messages_mcap(reader, args.image_topic)
+                img_map = extract_images(
+                    msgs, os.path.join(args.out, "images")
+                )
+            if args.pc_topic in topics:
+                msgs = fetch_messages_mcap(reader, args.pc_topic)
+                pc_map = extract_pointclouds(
+                    msgs, os.path.join(args.out, "pointclouds")
+                )
+    else:
+        raise ValueError("Unsupported bag format. Use .db3 or .mcap")
 
     map_file = os.path.join(args.out, "dataset_map.csv")
     with open(map_file, "w") as f:
@@ -137,8 +185,6 @@ def main() -> None:
             _, img_ts, img_file = img_map[idx]
             _, pc_ts, pc_file = pc_map[idx]
             f.write(f"{idx},{img_ts},{img_file},{pc_ts},{pc_file}\n")
-
-    conn.close()
 
 
 if __name__ == "__main__":
