@@ -15,7 +15,6 @@ if config['dataset'] != "rosbag":
 def main():
     """ 0.1 Use the plc-config file to make adjustments and customizations to your data. """
     dataset: Dataset = Dataset(data_dir=config['raw_data_path'],
-                               phase=config['phase'],
                                first_only=False)
     if config['exploring']['idx'] is not None:
         assert config["exploring"]["idx"] < len(dataset)

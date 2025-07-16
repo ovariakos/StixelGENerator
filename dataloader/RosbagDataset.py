@@ -2,11 +2,12 @@ import os
 import yaml
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from PIL import Image
 from typing import List
 
 from dataloader import BaseData, CameraInfo
+
+CONFIG_PATH = os.path.join('libraries', 'pcl-config.yaml')
 from libraries.Stixel import point_dtype
 
 
@@ -36,6 +37,8 @@ class RosbagDataLoader:
         self.name = "rosbag"
         self.first_only = first_only
         self.data_dir = data_dir
+        with open(CONFIG_PATH) as f:
+            self.config = yaml.safe_load(f)
         map_path = os.path.join(data_dir, "dataset_map.csv")
         self.record_map = pd.read_csv(map_path)
 
