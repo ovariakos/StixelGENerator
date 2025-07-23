@@ -35,6 +35,9 @@ class RosbagData(BaseData):
         valid_mask = np.isfinite(proj).all(axis=1)
         proj = proj[valid_mask]
         pts = pts[valid_mask]
+        # Clip projected points into signed 32-bit integer range
+        i32_min, i32_max = -(2 ** 31), 2 ** 31 - 1
+        proj = np.clip(proj, i32_min, i32_max).astype(int)
         sem_seg = np.zeros((pts.shape[0], 1))
         combined = np.hstack([pts, proj, sem_seg])
         self.points = np.array([tuple(row) for row in combined], dtype=point_dtype)

@@ -6,7 +6,13 @@ except ModuleNotFoundError as err:
     KittiDataLoader = None  # type: ignore
     KittiData = None  # type: ignore
     KITTI_IMPORT_ERROR = err
-from .CoopScenes import CoopSceneData, CoopScenesDataLoader
+try:
+    from .CoopScenes import CoopSceneData, CoopScenesDataLoader
+    COOPSCENES_IMPORT_ERROR = None
+except ModuleNotFoundError as err:
+    CoopScenesDataLoader = None  # type: ignore
+    CoopSceneData = None  # type: ignore
+    COOPSCENES_IMPORT_ERROR = err
 # from .CityscapesDataset import CityscapesDataLoader, CityscapesData
 from .RosbagDataset import RosbagDataLoader, RosbagData
 
