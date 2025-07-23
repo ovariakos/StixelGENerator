@@ -157,3 +157,4 @@ dataset_raw
 
 images_docs/
 *.jpg
+/dataset_raw/

@@ -86,11 +86,16 @@ def _generate_data_from_record_chunk(index_list: List[int], dataloader: Dataset,
         dataloader: The dataset object that provides access to the data.
         phase: The phase of data processing.
     """
+    asd_asdasd = None
+    asd_asdasd = True
+    print("DEBUG!!!!!!!!")
+
     with open(f"failures_{phase}.txt", "a") as file:
         file.write(f"gsutil -m cp \\ \n")
     # work on a list of assigned indices
     for index in index_list:
         print(f'index: {index} in progress ...')
+        print("DEBUGasdsad!   " + str(asd_asdasd))
         # iterate over all frames inside the record
         frame_num: int = 0
         try:
@@ -139,8 +144,7 @@ def _generate_data_from_record_chunk(index_list: List[int], dataloader: Dataset,
             except Exception as e:
                 print(f"{frame.name} failed due to {e}.")
                 continue
-        print(
-            f"Record-file with idx {index + 1}/ {len(dataloader)} ({round(100 / len(dataloader) * (index + 1), 1)}%) finished with {int(frame_num / 1)} frames")
+        print(f"Record-file with idx {index + 1}/ {len(dataloader)} ({round(100 / len(dataloader) * (index + 1), 1)}%) finished with {int(frame_num / 1)} frames")
         step_time = datetime.now() - overall_start_time
         print("Time elapsed: {}".format(step_time))
     with open(f"failures_{phase}.txt", "a") as file:

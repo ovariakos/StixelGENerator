@@ -54,6 +54,7 @@ class RosbagDataLoader:
         self.record_map = pd.read_csv(map_path)
 
         calib_path = os.path.join(data_dir, "calibration.yaml")
+        print("DEBUG ÜZENET!!! 0")
         if os.path.exists(calib_path):
             with open(calib_path) as f:
                 calib_cfg = yaml.safe_load(f)
@@ -61,23 +62,32 @@ class RosbagDataLoader:
             P = np.array(calib_cfg.get("P", np.hstack((K, np.zeros((3, 1))))) )
             T = np.array(calib_cfg.get("T", np.eye(4)))
             R = np.array(calib_cfg.get("R", np.eye(4)))
+            print("DEBUG ÜZENET!!! 1")
         else:
             K = np.eye(3)
             P = np.hstack((K, np.zeros((3, 1))))
             T = np.eye(4)
             R = np.eye(4)
+            print("DEBUG ÜZENET!!! 2")
         self.calib = CameraInfo(camera_mtx=K, trans_mtx=T, proj_mtx=P, rect_mtx=R)
 
         first_img = Image.open(os.path.join(data_dir, self.record_map.loc[0, "image_file"]))
         self.img_size = {"width": first_img.width, "height": first_img.height}
+        print("DEBUG ÜZENET!!! 3")
 
     def __len__(self) -> int:
         return len(self.record_map)
 
     def __getitem__(self, idx: int) -> List[RosbagData]:
+        print("DEBUG ÜZENET!!! 4")
         row = self.record_map.iloc[idx]
+        print("DEBUG ÜZENET!!! 5")
         name = f"frame_{int(row['index']):06d}"
+        print("DEBUG ÜZENET!!! 6")
         img_path = os.path.join(self.data_dir, row["image_file"])
+        print("DEBUG ÜZENET!!! 7")
         pc_path = os.path.join(self.data_dir, row["pc_file"])
+        print("DEBUG ÜZENET!!! 8")
         data = RosbagData(name, img_path, pc_path, self.calib)
+        print("DEBUG ÜZENET!!! 9")
         return [data]
