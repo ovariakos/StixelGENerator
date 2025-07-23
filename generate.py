@@ -53,7 +53,10 @@ def main():
         with open(f"failures_{phase}.txt", "w") as file:
             file.write("Record names by phase, which failed to open: \n")
         # every dataset consist all frames of one drive (kitti)
-        dataset: Dataset = Dataset(data_dir=config['raw_data_path'], phase=phase, first_only=False)
+        if config['dataset'] == 'rosbag':
+            dataset: Dataset = Dataset(data_dir=config['raw_data_path'], first_only=False)
+        else:
+            dataset: Dataset = Dataset(data_dir=config['raw_data_path'], phase=phase, first_only=False)
         """ Multi Threading - deprecated
         process_workload: int = int(len(dataset) / config['num_threads'])
         assert process_workload > 0, "Too less files for num_threads"
