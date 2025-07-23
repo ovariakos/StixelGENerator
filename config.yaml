@@ -6,13 +6,13 @@ phases:
   - training
   - validation
   - testing
-data_path: /home/marcel/workspace/datasets/
-raw_data_path: /home/marcel/workspace/datasets/raw/aeif
+data_path: output_stixel
+raw_data_path: dataset_raw
 exploring:
   idx: 44 #165, 377 42, 29
   frame_num: 1  #0, 1
   col: 234
 explore_data_deep: True
 grid_step: 16
-dataset: aeif    # waymo, kitti, kitti-360, aeif
+dataset: rosbag    # waymo, kitti, kitti-360, aeif
 generator: default   # bbox, semantic, default
