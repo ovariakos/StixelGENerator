@@ -183,9 +183,20 @@ class BottomPointCalculator:
         pt = np.stack([point['x'], point['y'], point['z']], axis=-1)
         # P = K * Rect * R|t with R|t = T
         # https://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/CameraInfo.html
-        point_in_camera = self.camera_info.P.dot(self.camera_info.R.dot(self.camera_info.T.dot(np.append(pt[:3], 1))))
-        # pixel = np.dot(self.camera_mtx, point_in_camera[:3])
-        u = int(point_in_camera[0] / point_in_camera[2])
-        v = int(point_in_camera[1] / point_in_camera[2])
-        projection = (u, v)
-        return projection
+        point_in_camera = self.camera_info.P.dot(
+            self.camera_info.R.dot(self.camera_info.T.dot(np.append(pt[:3], 1)))
+        )
+        # Avoid division by zero and huge integer conversion errors
+        z = point_in_camera[2]
+        if not np.isfinite(z) or abs(z) < 1e-9:
+            return 0, 0
+
+        u = point_in_camera[0] / z
+        v = point_in_camera[1] / z
+
+        # Clip to 32-bit signed range to prevent OverflowError
+        i32_min, i32_max = -(2**31), 2**31 - 1
+        u = int(np.clip(u, i32_min, i32_max))
+        v = int(np.clip(v, i32_min, i32_max))
+
+        return (u, v)
