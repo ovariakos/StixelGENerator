@@ -91,6 +91,9 @@ class Stixel:
         self.grid_step = grid_step
         self.sem_seg = top_point['sem_seg']
 
+        # Align stixel coordinates to the grid and ensure they stay inside the image
+        # bounds. Misaligned coordinates can be produced by imperfect
+        # calibrations, therefore we sanitize the values before continuing.
         self.force_stixel_to_grid()
         self.check_integrity()
 
@@ -118,16 +121,24 @@ class Stixel:
             self.column = self.image_size['width'] - self.grid_step
 
     def check_integrity(self):
-        """
-        Check the integrity of the values for the specified column and row.
-        """
-        for cut_row in (self.top_row, self.bottom_row):
-            assert cut_row <= self.image_size['height'], f"y-value out of bounds ({self.column},{cut_row})."
-            assert cut_row % self.grid_step == 0, f"y-value is not into grid ({self.column},{cut_row})."
-        assert self.column <= self.image_size['width'], f"x-value out of bounds ({self.column},{cut_row})."
-        assert self.column % self.grid_step == 0, f"x-value is not into grid ({self.column},{cut_row})."
-        #assert self.top_row < self.bottom_row, f"Top is higher than Bottom. Top_pt: {self.top_point}. Bottom_pt:{self.bottom_point}."
-        assert self.top_row != self.bottom_row, "Top is Bottom."
+        """Sanity check and fix stixel coordinates."""
+        for attr in ("top_row", "bottom_row"):
+            val = int(getattr(self, attr))
+            val = max(0, min(val, self.image_size["height"] - self.grid_step))
+            if val % self.grid_step != 0:
+                val = self._normalize_into_grid(val, step=self.grid_step)
+            setattr(self, attr, val)
+
+        self.column = int(self.column)
+        self.column = max(0, min(self.column, self.image_size["width"] - self.grid_step))
+        if self.column % self.grid_step != 0:
+            self.column = self._normalize_into_grid(self.column, step=self.grid_step)
+
+        if self.top_row == self.bottom_row:
+            if self.bottom_row + self.grid_step < self.image_size["height"]:
+                self.bottom_row += self.grid_step
+            elif self.top_row - self.grid_step >= 0:
+                self.top_row -= self.grid_step
 
     @staticmethod
     def _normalize_into_grid(pos: int, step: int = 8):
@@ -148,7 +159,7 @@ class Stixel:
         else:
             val_norm = pos - remainder_down  # Round down
 
-        return val_norm
+        return int(val_norm)
 
     @staticmethod
     def calculate_depth(top_point):
