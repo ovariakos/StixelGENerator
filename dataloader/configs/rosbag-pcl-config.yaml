@@ -1,0 +1,23 @@
+rm_gnd:
+  z_max: -0.96
+  distance_threshold: 0.190
+  ransac_n: 3
+  num_iterations: 10000
+rm_los:
+  disable: False
+  radius: 80000
+  x: 0.0
+  y: 0.0
+  z: 0.0
+rm_far_pts:
+  range_threshold: 75.0
+group_angle:
+  total_num_angles: 2048
+  min_angle: -0.72
+  max_angle: 0.7
+  num_groups: 156
+stixel_cluster:
+  min_samples: 2
+  cluster_eps: 100
+semantic_filter:
+  classes: [0]
