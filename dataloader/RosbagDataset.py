@@ -52,6 +52,8 @@ class RosbagDataLoader:
         self.data_dir = data_dir
         map_path = os.path.join(data_dir, "dataset_map.csv")
         self.record_map = pd.read_csv(map_path)
+        with open(f"dataloader/configs/{self.name}-pcl-config.yaml") as yaml_file:
+            self.config = yaml.safe_load(yaml_file)
 
         calib_path = os.path.join(data_dir, "calibration.yaml")
         print("DEBUG ÜZENET!!! 0")
