@@ -1,5 +1,3 @@
-from dataloader import WaymoDataLoader as Dataset
-from dataloader.WaymoDataset import show_projected_camera_synced_boxes
 from libraries import *
 import open3d as o3d
 import numpy as np
@@ -10,9 +8,19 @@ from libraries.Stixel import point_dtype_ext
 with open('config.yaml') as yaml_file:
     config = yaml.load(yaml_file, Loader=yaml.FullLoader)
 if config['dataset'] == "waymo":
-    from dataloader import WaymoDataLoader as Dataset, WaymoData as Data
+    from dataloader import WaymoDataLoader as Dataset, WaymoData as Data, WAYMO_IMPORT_ERROR
+    if Dataset is None:
+        raise ModuleNotFoundError(
+            "Waymo dataset support requires the 'waymo-open-dataset' package. "
+            "Install it via 'pip install waymo-open-dataset-tf-2-12-0'."
+        ) from WAYMO_IMPORT_ERROR
 elif config['dataset'] == "kitti":
-    from dataloader import KittiDataLoader as Dataset, KittiData as Data
+    from dataloader import KittiDataLoader as Dataset, KittiData as Data, KITTI_IMPORT_ERROR
+    if Dataset is None:
+        raise ModuleNotFoundError(
+            "Kitti dataset support requires the 'pykitti' package. "
+            "Install it via 'pip install pykitti'."
+        ) from KITTI_IMPORT_ERROR
 elif config['dataset'] == "aeif":
     from dataloader import CoopScenesDataLoader as Dataset, CoopSceneData as Data
 else:
