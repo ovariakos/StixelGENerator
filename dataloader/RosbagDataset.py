@@ -21,9 +21,20 @@ class RosbagData(BaseData):
 
         pts = np.loadtxt(pc_path, delimiter=",", skiprows=1)
         pts_h = np.hstack([pts, np.ones((pts.shape[0], 1))])
+
         proj = cam_info.P.dot(cam_info.R.dot(cam_info.T.dot(pts_h.T)))
-        proj[:2] /= proj[2, :]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            proj[:2] = np.divide(
+                proj[:2],
+                proj[2, :],
+                out=np.full_like(proj[:2], np.nan),
+                where=proj[2, :] != 0,
+            )
+
         proj = proj.T
+        valid_mask = np.isfinite(proj).all(axis=1)
+        proj = proj[valid_mask]
+        pts = pts[valid_mask]
         sem_seg = np.zeros((pts.shape[0], 1))
         combined = np.hstack([pts, proj, sem_seg])
         self.points = np.array([tuple(row) for row in combined], dtype=point_dtype)
