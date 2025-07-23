@@ -18,6 +18,7 @@ class RosbagData(BaseData):
         self.name = name
         self.image = Image.open(img_path)
         self.camera_info = cam_info
+        self.camera_pose = cam_info.T[:3, 3].reshape(3, 1)
 
         pts = np.loadtxt(pc_path, delimiter=",", skiprows=1)
         pts_h = np.hstack([pts, np.ones((pts.shape[0], 1))])
