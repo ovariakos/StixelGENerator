@@ -7,6 +7,12 @@ from libraries import StixelClass
 import cv2
 from libraries.Stixel import Stixel
 
+
+def _to_int32(value: int) -> int:
+    """Clip value into the 32-bit signed integer range and convert to ``int``."""
+    i32_min, i32_max = -(2 ** 31), 2 ** 31 - 1
+    return int(np.clip(int(value), i32_min, i32_max))
+
 colors = [(255, 0, 0), (255, 128, 0), (255, 255, 0), (0, 255, 0), (0, 255, 255),
           (0, 0, 255), (255, 0, 255)]
 stixel_colors = {
@@ -81,10 +87,10 @@ def draw_stixels_on_image(image, stixels: List[Stixel], stixel_width=8, alpha=0.
         cv2.addWeighted(overlay, grid_alpha, image, 1 - grid_alpha, 0, image)
 
     for stixel in stixels:
-        top_left_x, top_left_y = stixel.column, stixel.top_row
-        bottom_left_x, bottom_left_y = stixel.column, stixel.bottom_row
+        top_left_x, top_left_y = _to_int32(stixel.column), _to_int32(stixel.top_row)
+        bottom_left_x, bottom_left_y = _to_int32(stixel.column), _to_int32(stixel.bottom_row)
         color = get_color_from_depth(stixel.depth, min_depth, 50)
-        bottom_right_x = bottom_left_x + stixel_width
+        bottom_right_x = _to_int32(bottom_left_x + stixel_width)
         overlay = image.copy()
         cv2.rectangle(overlay, (top_left_x, top_left_y), (bottom_right_x, bottom_left_y), color, -1)
         cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
@@ -105,7 +111,7 @@ def draw_points_on_image(image, points, y_offset=0, coloring_sem: Optional[Dict[
             normalized_distance = point['w'] / max_distance
             color = cmap(normalized_distance)[:3]
             color = [int(c * 255) for c in color]
-        u, v = point['u'], point['v'] + y_offset
+        u, v = _to_int32(point['u']), _to_int32(point['v'] + y_offset)
         cv2.circle(image, (u, v), 2, color, -1)
     return Image.fromarray(image)
 
@@ -117,7 +123,7 @@ def draw_clustered_points_on_image(image, cluster_list, depth_coloring=False):
             if depth_coloring:
                 depth = point['w']
                 color = get_color_from_depth(depth, 3, 50)
-            u, v = int(point['u']), int(point['v'])
+            u, v = _to_int32(point['u']), _to_int32(point['v'])
             cv2.circle(image, (u, v), 2, color, -1)
     return Image.fromarray(image)
 
@@ -126,11 +132,11 @@ def draw_obj_points_on_image(image, objects, stixels: List[Stixel] = None, y_off
     for i, cluster_points in enumerate(objects):
         color = colors[i % len(colors)]
         for point in cluster_points.points:
-            u, v = point['u'], point['v'] + y_offset
+            u, v = _to_int32(point['u']), _to_int32(point['v'] + y_offset)
             cv2.circle(image, (u, v), 3, color, -1)
     if stixels is not None:
         for stixel in stixels:
-            u, v = stixel.top_point['u'], stixel.top_point['v']
+            u, v = _to_int32(stixel.top_point['u']), _to_int32(stixel.top_point['v'])
             color = stixel_colors[stixel.position_class]
             cv2.circle(image, (u, v), 3, color, -1)
     return Image.fromarray(image)
@@ -189,8 +195,8 @@ def draw_3d_wireframe_box(ax, u, v, color, linewidth=3):
 
   for (point_idx1, point_idx2) in lines:
     line = plt.Line2D(
-        xdata=(int(u[point_idx1]), int(u[point_idx2])),
-        ydata=(int(v[point_idx1]), int(v[point_idx2])),
+        xdata=(_to_int32(u[point_idx1]), _to_int32(u[point_idx2])),
+        ydata=(_to_int32(v[point_idx1]), _to_int32(v[point_idx2])),
         linewidth=linewidth,
         color=list(color) + [0.5])  # Add alpha for opacity
     ax.add_line(line)

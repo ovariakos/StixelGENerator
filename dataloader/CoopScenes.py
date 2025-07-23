@@ -102,7 +102,8 @@ class CoopSceneData(BaseData):
         points_2d_homogeneous = np.delete(points_2d_homogeneous, np.where(outlier), axis=1).T
         velo = np.delete(points_3d_homogeneous.T, np.where(outlier), axis=1).T
 
-        projection_list = np.array(points_2d_homogeneous[:, 0:3].astype(int))
+        i32_min, i32_max = -(2 ** 31), 2 ** 31 - 1
+        projection_list = np.clip(points_2d_homogeneous[:, 0:3], i32_min, i32_max).astype(int)
         pts_coordinates = np.array(velo[:, 0:3])
 
         sem_seg = np.zeros(len(pts_coordinates))[:, np.newaxis]

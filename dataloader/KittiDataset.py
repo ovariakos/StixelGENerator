@@ -57,7 +57,8 @@ class KittiData(BaseData):
         points_in_camera = np.delete(points_in_camera, np.where(outlier), axis=1).T
         velo = np.delete(velo, np.where(outlier), axis=1).T
 
-        projection_list = np.array(points_in_camera[:, 0:3].astype(int))
+        i32_min, i32_max = -(2 ** 31), 2 ** 31 - 1
+        projection_list = np.clip(points_in_camera[:, 0:3], i32_min, i32_max).astype(int)
         pts_coordinates = np.array(velo[:, 0:3])
         sem_seg = np.zeros(len(pts_coordinates))[:, np.newaxis]
         combined_data = np.hstack((pts_coordinates, projection_list, sem_seg))
@@ -76,7 +77,8 @@ class KittiData(BaseData):
         img_pts = img_pts / img_pts[2, :]
         img_pts = img_pts.T
         lidar_pts = lidar_pts.T
-        projection_list = np.array(img_pts[:, 0:2].astype(int))
+        i32_min, i32_max = -(2 ** 31), 2 ** 31 - 1
+        projection_list = np.clip(img_pts[:, 0:2], i32_min, i32_max).astype(int)
         pts_coordinates = np.array(lidar_pts[:, 0:3])
         combined_data = np.hstack((pts_coordinates, projection_list))
         pts = np.array([tuple(row) for row in combined_data], dtype=point_dtype)
