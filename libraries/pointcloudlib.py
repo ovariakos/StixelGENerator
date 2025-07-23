@@ -16,16 +16,26 @@ with open('libraries/pcl-config.yaml') as yaml_file:
 
 
 def segment_ground(points: np.array, show_pts: bool = False) -> np.array:
+    """Ground segmentation using Patchwork++ with basic outlier handling."""
     # https://github.com/url-kaist/patchwork-plusplus/blob/master/python/examples/demo_visualize.py
-    # Patchwork++ initialization
     xyz = np.vstack((points['x'], points['y'], points['z'])).T
-    # xyz = points
+
+    # Remove obviously invalid coordinates which may lead to qhull errors
+    max_range = 1e6
+    valid_mask = np.isfinite(xyz).all(axis=1) & (np.max(np.abs(xyz), axis=1) < max_range)
+    xyz = xyz[valid_mask]
+    points = points[valid_mask]
+
     params = pypatchworkpp.Parameters()
     params.enable_RNR = False
     PatchworkPLUSPLUS = pypatchworkpp.patchworkpp(params)
-    # Load point cloud
-    # Estimate Ground
-    PatchworkPLUSPLUS.estimateGround(xyz)
+
+    try:
+        PatchworkPLUSPLUS.estimateGround(xyz)
+    except Exception as e:  # pragma: no cover - robustness for Patchwork++ failures
+        print(f"PatchWork++ ground estimation failed: {e}")
+        return points
+
     ground = PatchworkPLUSPLUS.getGround()
     non_ground_idx = PatchworkPLUSPLUS.getNongroundIndices()
     mask_non_gnd = np.zeros(points.shape[0], dtype=bool)
