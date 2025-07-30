@@ -141,7 +141,17 @@ The following steps show how to extract a raw dataset from a rosbag so that it c
    python generate.py
    ```
 
-8. **Implement a dataloader**
+8. **Visualize Stixel Worlds**
+   Use `utility/image_visualization_cli.py` to overlay an existing `.stx1` file
+   on an image:
+   ```bash
+   python utility/image_visualization_cli.py --image path/to/image.jpg \
+       --stx path/to/world.stx1 --out overlay.png
+   ```
+   If you run the script from outside the repository specify the repo root with
+   `--root /path/to/StixelGENerator`.
+
+9. **Implement a dataloader**
    A simple loader named `RosbagDataLoader` is available to read this structure.
    It expects a `calibration.yaml` next to `dataset_map.csv` containing the
    camera matrices (K, P, R, T). You can use it directly by setting
