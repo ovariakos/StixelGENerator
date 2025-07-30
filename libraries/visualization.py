@@ -3,9 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from typing import List, Tuple, Dict, Optional
-from libraries import StixelClass
+from libraries.Stixel import Stixel, StixelClass
 import cv2
-from libraries.Stixel import Stixel
 
 
 def _to_int32(value: int) -> int:
