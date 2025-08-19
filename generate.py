@@ -86,16 +86,11 @@ def _generate_data_from_record_chunk(index_list: List[int], dataloader: Dataset,
         dataloader: The dataset object that provides access to the data.
         phase: The phase of data processing.
     """
-    asd_asdasd = None
-    asd_asdasd = True
-    print("DEBUG!!!!!!!!")
 
     with open(f"failures_{phase}.txt", "a") as file:
         file.write(f"gsutil -m cp \\ \n")
     # work on a list of assigned indices
     for index in index_list:
-        print(f'index: {index} in progress ...')
-        print("DEBUGasdsad!   " + str(asd_asdasd))
         # iterate over all frames inside the record
         frame_num: int = 0
         try:
@@ -191,6 +186,7 @@ def _export_single_dataset(stixels: List[Stixel], frame: Data, dataset_name: str
     #     os.makedirs(right_img_path, exist_ok=True)
     #     image_right.save(os.path.join(right_img_path, name + ".png"))
     # create .stx1
+
     for stixel in stixels:
         stxl = stx.Stixel()
         stxl.u = int(stixel.column)

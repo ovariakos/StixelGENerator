@@ -25,10 +25,15 @@ import importlib.util
 import sys
 import types
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 WINDOW = "calibration"
 DEFAULT_ROOT = Path(__file__).resolve().parents[0]
+
+# --- START OF MODIFICATION ---
+# Global dictionary to hold default trackbar values for the reset function
+DEFAULT_VALS: Dict[str, int] = {}
+# --- END OF MODIFICATION ---
 
 try:
     import stixel  # type: ignore
@@ -67,7 +72,7 @@ def _prepare_libraries(root: Path):
 
 
 def _to_stixels(
-    world: "stixel.StixelWorld", img_size: dict, stixel_mod
+        world: "stixel.StixelWorld", img_size: dict, stixel_mod
 ) -> Tuple[List[object], int]:
     """Convert a ``stixel.StixelWorld`` to visualization objects."""
     Stixel = stixel_mod.Stixel
@@ -94,22 +99,35 @@ def load_frame(dataset_dir: str, idx: int):
 
 
 def create_trackbars(image_shape):
+    global DEFAULT_VALS
     h, w = image_shape[:2]
     cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW, w // 2, h // 2)
+
+    # --- START OF MODIFICATION ---
+    # Define and store default values for the reset function
+    DEFAULT_VALS = {
+        "fx": 1952, "fy": 1104, "cx": w // 2, "cy": h // 2,
+        "tx": 500, "ty": 500, "tz": 500,
+        "roll": 180, "pitch": 180, "yaw": 180,
+    }
 
     # Intrinsics
-    cv2.createTrackbar("fx", WINDOW, 1952, 3000, lambda x: None)
-    cv2.createTrackbar("fy", WINDOW, 1104, 3000, lambda x: None)
-    cv2.createTrackbar("cx", WINDOW, w // 2, w, lambda x: None)
-    cv2.createTrackbar("cy", WINDOW, h // 2, h, lambda x: None)
+    cv2.createTrackbar("fx", WINDOW, DEFAULT_VALS["fx"], 3000, lambda x: None)
+    cv2.createTrackbar("fy", WINDOW, DEFAULT_VALS["fy"], 3000, lambda x: None)
+    cv2.createTrackbar("cx", WINDOW, DEFAULT_VALS["cx"], w, lambda x: None)
+    cv2.createTrackbar("cy", WINDOW, DEFAULT_VALS["cy"], h, lambda x: None)
 
-    # Extrinsic translation (scaled by 100: [-5, 5] m)
-    for name in ("tx", "ty", "tz"):
-        cv2.createTrackbar(name, WINDOW, 500, 1000, lambda x: None)
+    # Extrinsic translation
+    cv2.createTrackbar("tx", WINDOW, DEFAULT_VALS["tx"], 1000, lambda x: None)
+    cv2.createTrackbar("ty", WINDOW, DEFAULT_VALS["ty"], 1000, lambda x: None)
+    cv2.createTrackbar("tz", WINDOW, DEFAULT_VALS["tz"], 1000, lambda x: None)
 
-    # Extrinsic rotation in degrees [-180, 180]
-    for name in ("roll", "pitch", "yaw"):
-        cv2.createTrackbar(name, WINDOW, 180, 360, lambda x: None)
+    # Extrinsic rotation
+    cv2.createTrackbar("roll", WINDOW, DEFAULT_VALS["roll"], 360, lambda x: None)
+    cv2.createTrackbar("pitch", WINDOW, DEFAULT_VALS["pitch"], 360, lambda x: None)
+    cv2.createTrackbar("yaw", WINDOW, DEFAULT_VALS["yaw"], 360, lambda x: None)
+    # --- END OF MODIFICATION ---
 
 
 def get_values(image_shape):
@@ -211,12 +229,13 @@ def stixels_from_projection(uv, depth, img_shape, stixel_mod, width=8):
         stixels.append(Stixel(top_pt, bot_pt, StixelClass.OBJECT, {"width": w, "height": h}, grid_step=width))
     return stixels
 
+
 def _create_lidar_window(pts):
     """Create a 3D viewer for the lidar point cloud with enhanced visibility usable alongside OpenCV windows."""
     if o3d is None:
         return None, None, None
 
-    # Center point cloud at origin
+    # Center point cloud at origin for better camera manipulation
     pts_np = np.asarray(pts)
     center = pts_np.mean(axis=0)
     pts_centered = pts_np - center
@@ -233,7 +252,55 @@ def _create_lidar_window(pts):
     # Point cloud geometry
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts_centered)
-    pcd.paint_uniform_color([0.0, 1.0, 0.0])
+
+    # --- START OF MODIFICATION ---
+    # Implement a more sensitive, diverging colormap with outlier filtering
+    z_coords = pts_np[:, 2]
+
+    # 1. Filter outliers by defining a robust range using percentiles
+    p_low, p_high = 1.0, 99.0  # Use 1st and 99th percentiles
+    z_min_robust = np.percentile(z_coords, p_low)
+    z_max_robust = np.percentile(z_coords, p_high)
+
+    # 2. Calculate the mean of the inlier points to use as the center
+    inlier_mask = (z_coords > z_min_robust) & (z_coords < z_max_robust)
+    z_mean = np.mean(z_coords[inlier_mask])
+
+    # 3. Define the three colors for the diverging map
+    color_low = np.array([0.2, 0.6, 1.0])  # Light Blue
+    color_mid = np.array([0.9, 0.9, 0.9])  # Off-White (for the mean)
+    color_high = np.array([1.0, 0.0, 0.0])  # Red
+
+    # 4. Create an empty color array and process the two halves of the map
+    colors = np.zeros((len(z_coords), 3))
+
+    # Create masks for points below and above the mean
+    lower_mask = z_coords <= z_mean
+    upper_mask = z_coords > z_mean
+
+    # Normalize and interpolate for the lower half (blue -> white)
+    range_low = z_mean - z_min_robust
+    if range_low > 0:
+        # Clip values to the robust range before normalization
+        lower_z_clipped = np.clip(z_coords[lower_mask], z_min_robust, z_mean)
+        norm_low = (lower_z_clipped - z_min_robust) / range_low
+        colors[lower_mask] = (1 - norm_low)[:, np.newaxis] * color_low + norm_low[:, np.newaxis] * color_mid
+    else:  # If all points are the same, color them mid
+        colors[lower_mask] = color_mid
+
+    # Normalize and interpolate for the upper half (white -> red)
+    range_high = z_max_robust - z_mean
+    if range_high > 0:
+        # Clip values to the robust range before normalization
+        upper_z_clipped = np.clip(z_coords[upper_mask], z_mean, z_max_robust)
+        norm_high = (upper_z_clipped - z_mean) / range_high
+        colors[upper_mask] = (1 - norm_high)[:, np.newaxis] * color_mid + norm_high[:, np.newaxis] * color_high
+    else:  # If all points are the same, color them mid
+        colors[upper_mask] = color_mid
+
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+    # --- END OF MODIFICATION ---
+
     vis.add_geometry(pcd)
 
     # Reference axes
@@ -244,9 +311,9 @@ def _create_lidar_window(pts):
     frustum = o3d.geometry.LineSet()
     frustum.points = o3d.utility.Vector3dVector(np.zeros((5, 3)))
     frustum.lines = o3d.utility.Vector2iVector([
-        [0,1],[0,2],[0,3],[0,4],[1,2],[2,3],[3,4],[4,1]
+        [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [2, 3], [3, 4], [4, 1]
     ])
-    frustum.colors = o3d.utility.Vector3dVector([[1.0,0.0,0.0]]*8)
+    frustum.colors = o3d.utility.Vector3dVector([[1.0, 0.0, 0.0]] * 8)
     vis.add_geometry(frustum)
 
     # Initial render so window shows content
@@ -261,10 +328,6 @@ def _create_lidar_window(pts):
     ctr.set_zoom(0.7)
 
     return vis, pcd, frustum
-
-
-
-
 
 
 def _update_frustum(lineset, K, T, img_shape, far=5.0):
@@ -292,33 +355,56 @@ def _update_frustum(lineset, K, T, img_shape, far=5.0):
     lineset.points = o3d.utility.Vector3dVector(np.array(pts_world))
 
 
-def prompt_values():
-    """Ask the user for numeric values and update the sliders."""
+# --- START OF MODIFICATION ---
+def reset_sliders_to_default():
+    """Reset all trackbars to their initial default values."""
+    print("Resetting sliders to default values.")
+    for name, value in DEFAULT_VALS.items():
+        cv2.setTrackbarPos(name, WINDOW, value)
+
+
+def prompt_single_value():
+    """Ask the user for a single parameter and its new value."""
     root = tk.Tk()
     root.withdraw()
-    names = ["fx", "fy", "cx", "cy", "tx", "ty", "tz", "roll", "pitch", "yaw"]
-    vals = {}
-    for name in names:
-        v = simpledialog.askstring("Calibration Input", f"{name} =")
-        if v is None:
-            root.destroy()
-            return
-        vals[name] = float(v)
-    vals["roll"] = np.deg2rad(vals["roll"])
-    vals["pitch"] = np.deg2rad(vals["pitch"])
-    vals["yaw"] = np.deg2rad(vals["yaw"])
 
-    cv2.setTrackbarPos("fx", WINDOW, int(vals["fx"]))
-    cv2.setTrackbarPos("fy", WINDOW, int(vals["fy"]))
-    cv2.setTrackbarPos("cx", WINDOW, int(vals["cx"]))
-    cv2.setTrackbarPos("cy", WINDOW, int(vals["cy"]))
-    cv2.setTrackbarPos("tx", WINDOW, int(vals["tx"] * 100 + 500))
-    cv2.setTrackbarPos("ty", WINDOW, int(vals["ty"] * 100 + 500))
-    cv2.setTrackbarPos("tz", WINDOW, int(vals["tz"] * 100 + 500))
-    cv2.setTrackbarPos("roll", WINDOW, int(np.rad2deg(vals["roll"]) + 180))
-    cv2.setTrackbarPos("pitch", WINDOW, int(np.rad2deg(vals["pitch"]) + 180))
-    cv2.setTrackbarPos("yaw", WINDOW, int(np.rad2deg(vals["yaw"]) + 180))
+    # Map parameter names to their trackbar scaling factors
+    param_map = {
+        "fx": {"scale": 1, "offset": 0}, "fy": {"scale": 1, "offset": 0},
+        "cx": {"scale": 1, "offset": 0}, "cy": {"scale": 1, "offset": 0},
+        "tx": {"scale": 100, "offset": 500}, "ty": {"scale": 100, "offset": 500},
+        "tz": {"scale": 100, "offset": 500},
+        "roll": {"scale": 1, "offset": 180},
+        "pitch": {"scale": 1, "offset": 180},
+        "yaw": {"scale": 1, "offset": 180}
+    }
+
+    name = simpledialog.askstring("Input", f"Enter parameter name ({', '.join(param_map.keys())}):")
+    if not name or name not in param_map:
+        if name: print(f"Invalid parameter name: {name}")
+        root.destroy()
+        return
+
+    val_str = simpledialog.askstring("Input", f"Enter new value for '{name}':")
+    try:
+        val = float(val_str)
+    except (ValueError, TypeError):
+        if val_str: print(f"Invalid numeric value: {val_str}")
+        root.destroy()
+        return
+
+    # Convert user-friendly value to the integer trackbar position
+    # Example for tx: user enters -0.1 -> trackbar pos is -0.1 * 100 + 500 = 490
+    # Example for roll: user enters 90 -> trackbar pos is 90 + 180 = 270
+    p = param_map[name]
+    trackbar_val = int(round(val * p["scale"] + p["offset"]))
+
+    cv2.setTrackbarPos(name, WINDOW, trackbar_val)
+    print(f"Set {name} to {val} (Trackbar: {trackbar_val})")
     root.destroy()
+
+
+# --- END OF MODIFICATION ---
 
 
 def main():
@@ -354,7 +440,8 @@ def main():
 
     create_trackbars(img.shape)
 
-    print("Press 'i' for manual input, 's' to save, 'q' to quit.")
+    # --- START OF MODIFICATION ---
+    print("Press 'i' for manual input, 'r' to reset, 's' to save, 'q' to quit.")
     while True:
         K, P, T = get_values(img.shape)
         uv, depth = project_points(pts, K, T)
@@ -365,16 +452,23 @@ def main():
             display_stixels = stixels_from_projection(uv, depth, img.shape, stixel_mod, width)
         if display_stixels:
             disp = overlay_stixels(disp, display_stixels, viz_mod, width)
-        cv2.putText(disp, "i: input, s: save, q: quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        cv2.putText(disp, "i: input, r: reset, s: save, q: quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (255, 255, 255), 2)
         cv2.imshow(WINDOW, disp)
+
         _update_frustum(frustum, K, T, img.shape)
         if vis is not None:
             vis.update_geometry(frustum)
             vis.poll_events()
             vis.update_renderer()
+
         key = cv2.waitKey(10) & 0xFF
         if key == ord("i"):
-            prompt_values()
+            prompt_single_value()
+        elif key == ord("r"):
+            reset_sliders_to_default()
+        # --- END OF MODIFICATION ---
         elif key == ord("s"):
             calib = {"K": K.tolist(), "P": P.tolist(), "R": np.eye(4).tolist(), "T": T.tolist()}
             with open(os.path.join(args.data, "calibration.yaml"), "w") as f:

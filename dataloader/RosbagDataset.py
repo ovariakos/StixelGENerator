@@ -11,7 +11,6 @@ from libraries.Stixel import point_dtype
 
 
 class RosbagData(BaseData):
-    """Simple data container for datasets exported from rosbag."""
 
     def __init__(self, name: str, img_path: str, pc_path: str, cam_info: CameraInfo):
         super().__init__()
@@ -57,7 +56,6 @@ class RosbagDataLoader:
             self.config = yaml.safe_load(yaml_file)
 
         calib_path = os.path.join(data_dir, "calibration.yaml")
-        print("DEBUG ÜZENET!!! 0")
         if os.path.exists(calib_path):
             with open(calib_path) as f:
                 calib_cfg = yaml.safe_load(f)
@@ -65,13 +63,12 @@ class RosbagDataLoader:
             P = np.array(calib_cfg.get("P", np.hstack((K, np.zeros((3, 1))))) )
             T = np.array(calib_cfg.get("T", np.eye(4)))
             R = np.array(calib_cfg.get("R", np.eye(4)))
-            print("DEBUG ÜZENET!!! 1")
         else:
             K = np.eye(3)
             P = np.hstack((K, np.zeros((3, 1))))
             T = np.eye(4)
             R = np.eye(4)
-            print("DEBUG ÜZENET!!! 2")
+
         self.calib = CameraInfo(camera_mtx=K, trans_mtx=T, proj_mtx=P, rect_mtx=R)
 
         first_img = Image.open(os.path.join(data_dir, self.record_map.loc[0, "image_file"]))
